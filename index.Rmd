@@ -222,7 +222,100 @@ plot_ly(
          hovermode = "compare")
 ```
 
+### Confirmed Cases Distribution by Counrty
+```{r}
+# Plot the confirmed cases distribution by counrty with treemap plot
+conf_df <- coronavirus |> 
+  filter(type == "confirmed") |>
+  group_by(country) |>
+  summarise(total_cases = sum(cases)) |>
+  arrange(-total_cases) |>
+  mutate(parents = "Confirmed") |>
+  ungroup() 
+
+plot_ly(data = conf_df,
+        type= "treemap",
+        values = ~total_cases,
+        labels= ~ country,
+        parents=  ~parents,
+        domain = list(column=0),
+        name = "Confirmed",
+        textinfo="label+value+percent parent")
+```
+
+# Top20
+Column{.tabset}
+-----------------------------------
+```{r}
+# top 20 
+top_20 <- df_country |> 
+  group_by(country, type) |> 
+  pivot_wider(names_from = type, values_from = total) |> 
+  arrange(-confirmed) |> 
+  ungroup() |> 
+  top_n(20)
 
 
+# define 20 colors with colorRampPalette
+ncountry <- 20 
+country_color <- colorRampPalette(brewer.pal(10, "RdYlGn"))(ncountry)
+```
+
+
+### Top 20 Countries for Confirmed Caases 
+```{r}
+# confirmed cases 
+plot_ly(data = top_20, 
+        x = ~country, 
+        y = ~confirmed, 
+        type = "bar",
+        marker = list(color = country_color)) |> 
+  layout(title = "", 
+         xaxis = list(title = "Country", categoryorder = "total descending"), 
+         yaxis = list(title = "Confirmed Cases"))
+
+```
+
+### Top 20 Countries for Active Caases 
+```{r}
+# active cases 
+plot_ly(data = top_20, 
+        x = ~country, 
+        y = ~active, 
+        type = "bar", 
+        marker = list(color = country_color)) |> 
+  layout(title = "", 
+         xaxis = list(title = "Country", categoryorder = "total descending"), 
+         yaxis = list(title = "Active Cases"))
+
+```
+
+
+### Top 20 Countries for Recovered Caases 
+```{r}
+# recovered cases 
+plot_ly(data = top_20, 
+        x = ~country, 
+        y = ~recovery, 
+        type = "bar", 
+        marker = list(color = country_color)) |> 
+  layout(title = "", 
+         xaxis = list(title = "Country", categoryorder = "total descending"), 
+         yaxis = list(title = "Recovered Cases"))
+```
+
+### Top 20 Countries for Death Caases 
+```{r}
+
+# death cases 
+plot_ly(data = top_20, 
+        x = ~country, 
+        y = ~death, 
+        type = "bar", 
+        marker = list(color = country_color)) |> 
+  layout(title = "", 
+         xaxis = list(title = "Country", categoryorder = "total descending"), 
+         yaxis = list(title = "Death Cases"))
+```
 
 

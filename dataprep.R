@@ -135,9 +135,86 @@ plot_ly(
          hovermode = "compare")
 
 
-plot_ly(data = df_daily, 
-        x = ~date, 
-        y = ~confirmed, 
-        type = "histogram")
+# Plot the confirmed cases distribution by counrty with treemap plot
+conf_df <- coronavirus |> 
+  filter(type == "confirmed") |>
+  group_by(country) |>
+  summarise(total_cases = sum(cases)) |>
+  arrange(-total_cases) |>
+  mutate(parents = "Confirmed") |>
+  ungroup() 
 
-names(df_daily)
+plot_ly(data = conf_df,
+        type= "treemap",
+        values = ~total_cases,
+        labels= ~ country,
+        parents=  ~parents,
+        domain = list(column=0),
+        name = "Confirmed",
+        textinfo="label+value+percent parent")
+
+
+# top 20 
+top_20 <- df_country |> 
+  group_by(country, type) |> 
+  pivot_wider(names_from = type, values_from = total) |> 
+  arrange(-confirmed) |> 
+  ungroup() |> 
+  top_n(20)
+
+
+# define 20 colors with colorRampPalette
+ncountry <- 20 
+country_color <- colorRampPalette(brewer.pal(10, "RdYlGn"))(ncountry)
+
+
+# confirmed cases 
+plot_ly(data = top_20, 
+        x = ~country, 
+        y = ~confirmed, 
+        type = "bar", 
+        marker = list(color = country_color)) |> 
+  layout(title = "", 
+         xaxis = list(title = "Country", categoryorder = "total descending"), 
+         yaxis = list(title = "Confirmed Cases"))
+
+
+# active cases 
+plot_ly(data = top_20, 
+        x = ~country, 
+        y = ~active, 
+        type = "bar", 
+        marker = list(color = country_color)) |> 
+  layout(title = "", 
+         xaxis = list(title = "Country", categoryorder = "total descending"), 
+         yaxis = list(title = "Active Cases"))
+
+
+# recovered cases 
+plot_ly(data = top_20, 
+        x = ~country, 
+        y = ~recovery, 
+        type = "bar", 
+        marker = list(color = country_color)) |> 
+  layout(title = "", 
+         xaxis = list(title = "Country", categoryorder = "total descending"), 
+         yaxis = list(title = "Recovered Cases"))
+
+# death cases 
+plot_ly(data = top_20, 
+        x = ~country, 
+        y = ~death, 
+        type = "bar", 
+        marker = list(color = country_color)) |> 
+  layout(title = "", 
+         xaxis = list(title = "Country", categoryorder = "total descending"), 
+         yaxis = list(title = "Death Cases"))
+
+
+
+
+
+
+
+
+names(top_20)
