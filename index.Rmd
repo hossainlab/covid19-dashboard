@@ -2,7 +2,12 @@
 title: "Global Situation of COVID19"
 output: 
   flexdashboard::flex_dashboard:
+    logo: img/logo.png
+    favicon: img/favicon.png
+    theme: flatly
     orientation: rows
+    social: menu
+    source_code: https://github.com/hossainlab/covid19-dashboard
     vertical_layout: fill
 ---
 
@@ -318,4 +323,5 @@ plot_ly(data = top_20,
          yaxis = list(title = "Death Cases"))
 ```
 
-
+# About 
+This dashboard provides an overview of the COVID-19 (2019-nCoV) epidemic. This dashboard was built with R using Rmarkdown and the Flexdashboard package. The Github Repository for this dashboard available [here](https://github.com/hossainlab/covid19-dashboard)
