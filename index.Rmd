@@ -17,6 +17,7 @@ library(flexdashboard)
 # Load packages 
 library(tidyverse)
 library(data.table)
+library(DT)
 
 # Color and maps 
 library(plotly)
@@ -323,5 +324,194 @@ plot_ly(data = top_20,
          yaxis = list(title = "Death Cases"))
 ```
 
+# Vaccination  
+```{r}
+
+# Vaccination Data
+df_vax <- read.csv("data/vaccinations.csv")
+
+
+# daily vaccinations
+df_vax_daily <- df_vax |> 
+  select(date, location, daily_vaccinations) |> 
+  group_by(location, date) |> 
+  summarise(total = sum(daily_vaccinations), .groups="drop") |> 
+  filter(location != "World") |> 
+  arrange(-total)|> 
+  pivot_wider(names_from = date, values_from = total) |> 
+  slice(1:20) |> 
+  pivot_longer(cols = -location, 
+               names_to = "date", 
+               values_to = "total") |> 
+  mutate(date = ymd(date)) 
+
+
+
+# world statistics
+df_world_vax <- df_vax |> 
+  select(location,
+         total_vaccinations,
+         people_vaccinated,
+         people_fully_vaccinated,
+  ) 
+# world statistics
+df_world_vax <- df_vax |> 
+  select(location,
+         total_vaccinations,
+         people_vaccinated,
+         people_fully_vaccinated,
+  ) |> 
+  filter(location == "World") |> 
+  summarise(total_vax = max(total_vaccinations, na.rm = T),
+            ppl_once = max(people_vaccinated, na.rm = T),
+            fully_vax = max(people_fully_vaccinated, na.rm = T)) |> 
+  mutate(across(where(is.numeric), scales::comma))
+
+
+# total vaccines administered
+df_vax_total <- df_vax |> 
+  select(location, iso_code, total_vaccinations) |> 
+  group_by(location) |> 
+  filter(total_vaccinations == max(total_vaccinations, na.rm = T), location != "World") 
+```
+
+
+Row
+-----------------------------------------------------------------------
+
+### Total Doses {.value-box}
+
+```{r}
+valueBox(value = df_world_vax$total_vax,
+         caption = "Total Doses Administered",
+         color = "#99d8c9")
+```
+
+### At least one {.value-box}
+
+```{r}
+valueBox(value = df_world_vax$ppl_once,
+         caption = "No. of people vaccinated (at least one dose)",
+         color = "#66c2a4")
+```
+
+### People Fully vaccinated {.value-box}
+
+```{r}
+valueBox(value = df_world_vax$fully_vax, 
+         caption = "No. of people fully vaccinated", 
+         color = "#41ae76")
+```
+
+Row{.tabset}
+-----------------------------------------------------------------------
+
+### Map 
+```{r}
+
+# figure out how to use iso code to create leaflet maps
+# https://www.r-graph-gallery.com/183-choropleth-map-with-leaflet.html
+
+# Plotly choroplet map
+# https://plotly.com/r/choropleth-maps/
+# light grey boundaries
+l <- list(color = toRGB("grey"), width = 0.5)
+
+# specify map projection/options
+g <- list(
+  showframe = FALSE,
+  showcoastlines = FALSE,
+  projection = list(type = 'Mercator')
+)
+
+# add trace
+vax_map <- plot_geo(df_vax_total)
+vax_map <- vax_map  |> 
+  add_trace(
+  z = ~total_vaccinations,
+  color = ~total_vaccinations,
+  colors = 'Greens',
+  text = ~location,
+  locations = ~iso_code,
+  marker = list(line = l)
+)
+
+# add title to colorbar
+vax_map <- vax_map  |> 
+  colorbar(title = 'Total vaccinations (M)')
+
+# add title and subtitle
+vax_map <- vax_map  |> 
+  layout(title = 'Total COVID-19 Vaccination Doses Administered<br>Source:<a href="https://github.com/owid/covid-19-data/tree/master/public/data/vaccinations">Our World in Data</a>', geo = g)
+
+vax_map
+```
+
+### Top 20 Countries 
+```{r}
+
+# Top 20
+# define 20 colors with colorRampPalette
+ncountry_vaccination <- 20 
+country_color_vaccination <- colorRampPalette(brewer.pal(10, "RdYlGn"))(ncountry_vaccination)
+
+
+# for limits of graph
+max = arrange(df_vax_total, -total_vaccinations)$total_vaccinations[1]
+
+vax_total <- df_vax_total  |> 
+  arrange(-total_vaccinations) |> 
+  ungroup() |> 
+  slice(1:20) |> 
+  mutate(location = fct_reorder(location, total_vaccinations))
+
+
+plot_ly(data = vax_total, 
+        x = ~location, 
+        y = ~total_vaccinations, 
+        type = "bar", 
+        marker = list(color = country_color_vaccination)) |> 
+  layout(title = "", 
+         xaxis = list(title = "Country", categoryorder = "total descending"), 
+         yaxis = list(title = "Total Vaccinations"))
+
+```
+
+
+
+### Data 
+```{r}
+df_vax_total |> 
+  datatable(options = list(
+    bPaginate = TRUE,
+    scrollX = FALSE,
+    columnDefs = list(list(className = 'dt-center', targets = "_all"))
+  ),
+  rownames=FALSE,
+  caption = 'Vaccination Data',
+  style = 'bootstrap', 
+  class = 'cell-border stripe')
+```
+
+
 # About 
 This dashboard provides an overview of the COVID-19 (2019-nCoV) epidemic. This dashboard was built with R using Rmarkdown and the Flexdashboard package. The Github Repository for this dashboard available [here](https://github.com/hossainlab/covid19-dashboard)
+
+**Data**
+
+The source of data for this dashboard is from the R package [coronavirus](https://github.com/RamiKrispin/coronavirus). With the raw data pulled from the [COVID-19 Data Repository by the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University](https://github.com/CSSEGISandData/COVID-19)
+
+The source of vaccination data can be found at the Our World in Data [vaccination github repo](https://github.com/owid/covid-19-data/tree/master/public/data/vaccinations)
+
+**Packages**
+
+* Dashboard interface - `flexdashboard`
+* Visualization - `plotly`, `RColorBrewer`, `ggplot2`
+* Data Import - `data.table`
+* Data manipulation - `dplyr`, `tidyr`, `purrr`, `forcats`
+* Mapping - `leaflet`, `leafpop` 
+* Strings - `glue`
+* Data Source - `coronavirus`
+* Data display - `DT`
+* Dates - `lubridate`
+* Scales - `scales`
