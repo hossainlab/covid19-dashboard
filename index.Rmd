@@ -58,7 +58,6 @@ df_country <- coronavirus |>
                values_to = "total")
 
 
-
 # for global statistics
 df_world <- coronavirus |> 
   group_by(type) |> 
@@ -66,7 +65,18 @@ df_world <- coronavirus |>
   pivot_wider(names_from = type, 
               values_from = total) |> 
   mutate(active = confirmed - death - recovery)
-  
+
+
+# for leaflet map
+df_map <- coronavirus  |> 
+  filter(cases > 0)  |> 
+  group_by(country, province, lat, long, type)  |> 
+  summarise(cases = sum(cases), .groups = "drop")  |> 
+  mutate(log_cases = 2 * log(cases))  |> 
+  ungroup()
+
+df_map.split <- df_map  |> 
+  split(df_map$type)
 ```
 
 ```{r}
@@ -82,6 +92,8 @@ discharged_pct_color <- "#e5383b"
 
 # Overview 
 
+Row
+-----------------------------------------------------------------------
 ### confirmed {.value-box}
 ```{r}
 confirmed <- format(df_world$confirmed, big.mark = ",")
@@ -139,6 +151,75 @@ valueBox(
     color = cfr_color, 
     icon = "fa-heart-broken"
 )
+```
+
+Row
+-------------------------------
+### Map 
+```{r}
+
+# Color pallete
+pal <- colorFactor(c("grey", "red", "green"),
+                   domain = c("confirmed", "death", "recovered"))
+
+
+
+map_object <- leaflet()  |> 
+  addProviderTiles(providers$CartoDB.DarkMatter) |> 
+  setView(41.405559, 0.247590, zoom = 2)
+
+names(df_map.split) |> 
+  walk(function(coronavirus) {
+    map_object <<- map_object |> 
+      addCircleMarkers(data = df_map.split[[coronavirus]],
+                       lng = ~long, lat = ~lat,
+                       color = ~pal(type),
+                       stroke = FALSE,
+                       fillOpacity = 0.5,
+                       radius = ~log_cases,
+                       popup =  popupTable(df_map.split[[coronavirus]],
+                                           feature.id = FALSE,
+                                           row.numbers = FALSE,
+                                           zcol=c("type","cases","country","province")),
+                       group = coronavirus,
+                       labelOptions = labelOptions(noHide = F,
+                                                   direction = 'auto'))
+  })
+
+map_object |> 
+  addLayersControl(
+    overlayGroups = names(df_map.split),
+    options = layersControlOptions(collapsed = FALSE)) |> 
+  hideGroup(c("confirmed", "recovered"))
+```
+
+
+# Daily 
+Column
+-----------------------------------
+### Daily Cumulative Cases
+```{r}
+# Daily Cumulative Cases
+plot_ly(
+  data = df_daily, 
+  x = ~date, 
+  y = ~active_cum, 
+  name = "Active", 
+  fillcolor = "blue", 
+  type = "scatter", 
+  mode = "none", 
+  stackgroup = "one") |> 
+  add_trace(y = ~confirmed_cum, 
+            name = "Recovered", 
+            fillcolor = "green") |> 
+  add_trace(y = ~death_cum, 
+            name = "Death", 
+            fillcolor = "red") |> 
+  layout(title = "", 
+         xaxis = list(title = "Date", type = "date"), 
+         yaxis = list(title = "Cumulative Number of Cases"), 
+         legend = list(x = 0.1, y = 0.9), 
+         hovermode = "compare")
 ```
 
 

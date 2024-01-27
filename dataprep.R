@@ -63,21 +63,6 @@ df_world <- coronavirus |>
   pivot_wider(names_from = type, 
               values_from = total) |> 
   mutate(active = confirmed - death - recovery)
-  
-
-# Fig 1. Daily confirmed cases 
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # for leaflet map
@@ -96,9 +81,11 @@ df_map.split <- df_map  |>
 pal <- colorFactor(c("grey", "red", "green"),
                    domain = c("confirmed", "death", "recovered"))
 
+
+
 map_object <- leaflet()  |> 
   addProviderTiles(providers$CartoDB.DarkMatter) |> 
-  setView(41.405559, 0.247590, zoom=2)
+  setView(41.405559, 0.247590, zoom = 2)
 
 names(df_map.split) |> 
   walk(function(coronavirus) {
@@ -125,5 +112,32 @@ map_object |>
   hideGroup(c("confirmed", "recovered"))
 
 
+# Daily Cumulative Cases
+plot_ly(
+  data = df_daily, 
+  x = ~date, 
+  y = ~active_cum, 
+  name = "Active", 
+  fillcolor = "blue", 
+  type = "scatter", 
+  mode = "none", 
+  stackgroup = "one") |> 
+  add_trace(y = ~confirmed_cum, 
+            name = "Recovered", 
+            fillcolor = "green") |> 
+  add_trace(y = ~death_cum, 
+            name = "Death", 
+            fillcolor = "red") |> 
+  layout(title = "", 
+         xaxis = list(title = "Date", type = "date"), 
+         yaxis = list(title = "Cumulative Number of Cases"), 
+         legend = list(x = 0.1, y = 0.9), 
+         hovermode = "compare")
 
 
+plot_ly(data = df_daily, 
+        x = ~date, 
+        y = ~confirmed, 
+        type = "histogram")
+
+names(df_daily)
